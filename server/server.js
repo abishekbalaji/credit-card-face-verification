@@ -1,7 +1,9 @@
-const path = require("path");
+ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const hbs = require("hbs");
+const session = require("express-session");
+const spawn = require("child_process").spawn;
 
 require("./db/mongoose");
 
@@ -9,7 +11,15 @@ const CreditCardDetails = require("./db/models/creditCardDetails");
 
 const app = express();
 
-const port = process.env.PORT || 3000;
+app.use(
+  session({
+    secret: "credit card app",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+const port = process.env.PORT || 4000;
 
 const publicDirectoryPath = path.join(__dirname, "../public");
 const viewsPath = path.join(__dirname, "../templates/views");
@@ -54,8 +64,23 @@ app.post("/card-data", async (req, res) => {
   }
 });
 
-app.post("/take-photo", (req, res) => {
-  console.log(req.body);
+app.post("/take-photo", async (req, res) => {
+  const pythonFilePath = path.join(
+    __dirname,
+    "../face_detection/opencv/data/haarcascades/test.py"
+  );
+  const photoID = req.body.photoID;
+  req.session.photoID = photoID;
+  try {
+    await spawn("python", [pythonFilePath]);
+    // photoProcess.stdout.on("data", async (data) => {
+    //   let dataArray = JSON.stringify(data.toString());
+    //   console.log(dataArray);
+    // });
+    // photoProcess.stderr.pipe(process.stderr);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 app.listen(port, () => {

@@ -31,7 +31,7 @@ const creditCardDetails = mongoose.Schema({
 const CreditCardDetails = mongoose.model("creditCard", creditCardDetails);
 
 // const newDetails = new CreditCardDetails({
-//   name: "Abishek B",
+//   name: "Amutha V",
 //   cardNumber: "3566 0020 2036 0505",
 //   expiryDate: "12/22",
 //   securityCode: 111,
