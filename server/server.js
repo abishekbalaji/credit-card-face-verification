@@ -2,6 +2,7 @@ const path = require("path");
 const spawn = require("child_process").spawn;
 const fs = require("fs");
 
+const AWS = require("aws-sdk");
 const express = require("express");
 const bodyParser = require("body-parser");
 const hbs = require("hbs");
@@ -78,11 +79,107 @@ app.get("/take-photo", async (req, res) => {
     "../face_detection/opencv/data/haarcascades/test.py"
   );
   try {
-    await spawn("python", [pythonFilePath]);
-    // photoProcess.stdout.on("data", async (data) => {
-    //   let dataArray = JSON.stringify(data.toString());
-    //   console.log(dataArray);
-    // });
+    const photoProcess = await spawn("python", [pythonFilePath]);
+    photoProcess.stdout.on("data", async (data) => {
+      let dataArray = JSON.stringify(data.toString());
+      console.log(dataArray);
+      await setTimeout(async () => {
+        const targetPath = path.join(__dirname, "../opencv_frame_0.png");
+        const sourcePath = path.join(__dirname, "../source-image/source.png");
+
+        const ID = "AKIA5SNB3VHF4MYXUKFL";
+        const SECRET = "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";
+
+        const BUCKET_NAME = "credit-card"; // the bucketname without s3://
+
+        const s3 = new AWS.S3({
+          accessKeyId: ID,
+          secretAccessKey: SECRET,
+        });
+
+        const uploadFile = async (fileName) => {
+          // Read content from the file
+          const fileContent = await fs.readFileSync(fileName);
+
+          // Setting up S3 upload parameters
+          const params = {
+            Bucket: BUCKET_NAME,
+            Key: fileName, // File name you want to save as in S3
+            Body: fileContent,
+          };
+
+          // const params = {
+          //   Bucket: BUCKET_NAME,
+          //   key: targetPath,
+          //   Body: fileContent,
+          // };
+
+          //Uploading files to the bucket
+          await s3.upload(params, async function (err, data) {
+            if (err) {
+              throw err;
+            }
+            console.log(`File uploaded successfully. ${data.Location}`);
+            await compareFaces();
+          });
+        };
+
+        await uploadFile(sourcePath);
+        await uploadFile(targetPath);
+
+        // s3.createBucket(params, function (err, data) {
+        //   if (err) console.log(err, err.stack);
+        //   else console.log("Bucket Created Successfully", data.Location);
+        // });
+
+        // setTimeout(async () => {
+        const compareFaces = () => {
+          const config = new AWS.Config({
+            accessKeyId: ID,
+            secretAccessKey: SECRET,
+            region: "ap-south-1",
+          });
+
+          AWS.config = config;
+
+          const client = new AWS.Rekognition();
+          const params = {
+            SourceImage: {
+              S3Object: {
+                Bucket: BUCKET_NAME,
+                Name: sourcePath,
+              },
+            },
+            TargetImage: {
+              S3Object: {
+                Bucket: BUCKET_NAME,
+                Name: targetPath,
+              },
+            },
+            SimilarityThreshold: 70,
+          };
+          client.compareFaces(params, function (err, response) {
+            if (err) {
+              console.log(err, err.stack); // an error occurred
+              return res.render("checkout_page_with_btn");
+            } else {
+              response.FaceMatches.forEach((data) => {
+                let position = data.Face.BoundingBox;
+                let similarity = data.Similarity;
+                console.log(
+                  `The face at: ${position.Left}, ${position.Top} matches with ${similarity} % confidence`
+                );
+                if (similarity > 70) {
+                  return res.render("success");
+                }
+                return res.render("checkout_page_with_btn_wrong_photo");
+              }); // for response.faceDetails
+            } // if
+          });
+        };
+        // }, 2000);
+      }, 2000);
+    });
     // photoProcess.stderr.pipe(process.stderr);
   } catch (error) {
     console.log(error);

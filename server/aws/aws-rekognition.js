@@ -1,7 +1,12 @@
 const AWS = require("aws-sdk");
+const path = require("path");
+
+const targetPath = path.join(__dirname, "../../opencv_frame_0.png");
+const sourcePath = path.join(__dirname, "../../source-image/source.png");
+
 const bucket = "bucket"; // the bucketname without s3://
-const photo_source = "source.jpg";
-const photo_target = "target.jpg";
+const photo_source = sourcePath;
+const photo_target = targetPath;
 const config = new AWS.Config({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
