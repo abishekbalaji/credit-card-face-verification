@@ -178,12 +178,9 @@
             </div>
         </div>
     </form>
-    <form action="/take-photo" method="post">
-        <input type="hidden" name="photoID" value="{{photoID}}">
-        <div>
-            <button class="take-photo__btn" type="submit">Take Photo</button>
-        </div>
-    </form>
+    <div>
+        <button class="take-photo__btn" onclick="http://localhost:4000/take-photo">Take Photo</button>
+    </div>
 </body>
 
 </html>

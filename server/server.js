@@ -1,9 +1,12 @@
- const path = require("path");
+const path = require("path");
+const spawn = require("child_process").spawn;
+const fs = require("fs");
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const hbs = require("hbs");
 const session = require("express-session");
-const spawn = require("child_process").spawn;
+const multer = require("multer");
 
 require("./db/mongoose");
 
@@ -23,6 +26,11 @@ const port = process.env.PORT || 4000;
 
 const publicDirectoryPath = path.join(__dirname, "../public");
 const viewsPath = path.join(__dirname, "../templates/views");
+
+const sourceImageStoragePath = path.join(
+  __dirname,
+  "../source-image/source.png"
+);
 
 app.use(express.static(publicDirectoryPath));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -56,21 +64,19 @@ app.post("/card-data", async (req, res) => {
 
   console.log(details);
   if (details) {
-    console.log(details.photoID);
-    res.render("checkout_page_with_btn", { photoID: details.photoID });
+    fs.writeFileSync(sourceImageStoragePath, details.photo);
+    res.render("checkout_page_with_btn");
   } else {
     console.log("Invalid details!");
     res.render("checkout_page_wrong_cred");
   }
 });
 
-app.post("/take-photo", async (req, res) => {
+app.get("/take-photo", async (req, res) => {
   const pythonFilePath = path.join(
     __dirname,
     "../face_detection/opencv/data/haarcascades/test.py"
   );
-  const photoID = req.body.photoID;
-  req.session.photoID = photoID;
   try {
     await spawn("python", [pythonFilePath]);
     // photoProcess.stdout.on("data", async (data) => {
