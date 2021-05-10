@@ -33,10 +33,10 @@ const creditCardDetails = mongoose.Schema({
 
 const CreditCardDetails = mongoose.model("creditCard", creditCardDetails);
 
-const imagePath = path.join(__dirname, "../../../opencv_frame_0.png");
+// const imagePath = path.join(__dirname, "../../../opencv_frame_0.png");
 
 // const newDetails = new CreditCardDetails({
-//   name: "Abishek V",
+//   name: "Abishek B",
 //   cardNumber: "3566 0020 2036 0505",
 //   expiryDate: "12/22",
 //   securityCode: 123,

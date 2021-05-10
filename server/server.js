@@ -83,102 +83,113 @@ app.get("/take-photo", async (req, res) => {
     photoProcess.stdout.on("data", async (data) => {
       let dataArray = JSON.stringify(data.toString());
       console.log(dataArray);
-      await setTimeout(async () => {
-        const targetPath = path.join(__dirname, "../opencv_frame_0.png");
-        const sourcePath = path.join(__dirname, "../source-image/source.png");
+      // await setTimeout(async () => {
+      const targetPath = path.join(__dirname, "../opencv_frame_0.png");
+      const sourcePath = path.join(__dirname, "../source-image/source.png");
 
-        const ID = "AKIA5SNB3VHF4MYXUKFL";
-        const SECRET = "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";
+      const ID = "AKIA5SNB3VHF4MYXUKFL";
+      const SECRET = "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";
 
-        const BUCKET_NAME = "credit-card"; // the bucketname without s3://
+      const BUCKET_NAME = "credit-card"; // the bucketname without s3://
 
-        const s3 = new AWS.S3({
-          accessKeyId: ID,
-          secretAccessKey: SECRET,
-        });
+      const s3 = new AWS.S3({
+        accessKeyId: ID,
+        secretAccessKey: SECRET,
+      });
 
-        const uploadFile = async (fileName) => {
-          // Read content from the file
-          const fileContent = await fs.readFileSync(fileName);
+      const uploadFile = async (fileName) => {
+        // Read content from the file
+        const fileContent = await fs.readFileSync(fileName);
 
-          // Setting up S3 upload parameters
-          const params = {
-            Bucket: BUCKET_NAME,
-            Key: fileName, // File name you want to save as in S3
-            Body: fileContent,
-          };
-
-          // const params = {
-          //   Bucket: BUCKET_NAME,
-          //   key: targetPath,
-          //   Body: fileContent,
-          // };
-
-          //Uploading files to the bucket
-          await s3.upload(params, async function (err, data) {
-            if (err) {
-              throw err;
-            }
-            console.log(`File uploaded successfully. ${data.Location}`);
-            await compareFaces();
-          });
+        // Setting up S3 upload parameters
+        const params = {
+          Bucket: BUCKET_NAME,
+          Key: fileName, // File name you want to save as in S3
+          Body: fileContent,
         };
 
-        await uploadFile(sourcePath);
-        await uploadFile(targetPath);
+        // const params = {
+        //   Bucket: BUCKET_NAME,
+        //   key: targetPath,
+        //   Body: fileContent,
+        // };
 
-        // s3.createBucket(params, function (err, data) {
-        //   if (err) console.log(err, err.stack);
-        //   else console.log("Bucket Created Successfully", data.Location);
-        // });
+        //Uploading files to the bucket
+        await s3.upload(params, async function (err, data) {
+          if (err) {
+            throw err;
+          }
+          console.log(`File uploaded successfully. ${data.Location}`);
+        });
+      };
 
-        // setTimeout(async () => {
-        const compareFaces = () => {
-          const config = new AWS.Config({
-            accessKeyId: ID,
-            secretAccessKey: SECRET,
-            region: "ap-south-1",
-          });
+      await uploadFile(sourcePath);
+      await uploadFile(targetPath);
+      setTimeout(() => {
+        compareFaces();
+      }, 35000);
 
-          AWS.config = config;
+      // s3.createBucket(params, function (err, data) {
+      //   if (err) console.log(err, err.stack);
+      //   else console.log("Bucket Created Successfully", data.Location);
+      // });
 
-          const client = new AWS.Rekognition();
-          const params = {
-            SourceImage: {
-              S3Object: {
-                Bucket: BUCKET_NAME,
-                Name: sourcePath,
-              },
+      // setTimeout(async () => {
+      const compareFaces = () => {
+        console.log("Comparing faces.");
+        const config = new AWS.Config({
+          accessKeyId: ID,
+          secretAccessKey: SECRET,
+          region: "ap-south-1",
+        });
+
+        AWS.config = config;
+
+        const client = new AWS.Rekognition();
+        const params = {
+          SourceImage: {
+            S3Object: {
+              Bucket: BUCKET_NAME,
+              Name: sourcePath,
             },
-            TargetImage: {
-              S3Object: {
-                Bucket: BUCKET_NAME,
-                Name: targetPath,
-              },
+          },
+          TargetImage: {
+            S3Object: {
+              Bucket: BUCKET_NAME,
+              Name: targetPath,
             },
-            SimilarityThreshold: 70,
-          };
-          client.compareFaces(params, function (err, response) {
-            if (err) {
-              console.log(err, err.stack); // an error occurred
-              return res.render("checkout_page_with_btn");
-            } else {
-              response.FaceMatches.forEach((data) => {
-                let position = data.Face.BoundingBox;
-                let similarity = data.Similarity;
+          },
+        };
+        client.compareFaces(params, function (err, response) {
+          if (err) {
+            console.log(err, err.stack); // an error occurred
+            return res.render("checkout_page_with_btn_wrong_photo");
+          } else if (response.FaceMatches.length === 0) {
+            console.log("Face doesn't match");
+            return res.render("checkout_page_with_btn_wrong_photo");
+          } else {
+            console.log("Response exists");
+            console.log(response.FaceMatches);
+            response.FaceMatches.forEach((data) => {
+              let position = data.Face.BoundingBox;
+              console.log("position: ", position);
+              let similarity = data.Similarity;
+              console.log("data: ", data);
+              if (similarity > 70) {
                 console.log(
                   `The face at: ${position.Left}, ${position.Top} matches with ${similarity} % confidence`
                 );
-                if (similarity > 70) {
-                  return res.render("success");
-                }
-                return res.render("checkout_page_with_btn_wrong_photo");
-              }); // for response.faceDetails
-            } // if
-          });
-        };
-        // }, 2000);
-      }, 2000);
+                return res.render("success");
+              }
+              return res.render("checkout_page_with_btn_wrong_photo");
+            }); // for response.faceDetails
+          } //else {
+          //   return res.render("checkout_page_with_btn_wrong_photo");
+          // }
+        });
+      };
+      // }, 2000);
+      // }, 2000);
     });
     // photoProcess.stderr.pipe(process.stderr);
   } catch (error) {
