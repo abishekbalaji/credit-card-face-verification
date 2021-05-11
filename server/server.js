@@ -87,8 +87,8 @@ app.get("/take-photo", async (req, res) => {
       const targetPath = path.join(__dirname, "../opencv_frame_0.png");
       const sourcePath = path.join(__dirname, "../source-image/source.png");
 
-      const ID = "AKIA5SNB3VHF4MYXUKFL";
-      const SECRET = "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";
+      const ID = "aws id";
+      const SECRET = "aws secret key";
 
       const BUCKET_NAME = "credit-card"; // the bucketname without s3://
 
